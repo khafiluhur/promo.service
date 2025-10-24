@@ -1,0 +1,46 @@
+services:
+  swagger:
+    volumes:
+      - ./swagger/order.swagger.json:/usr/share/nginx/html/api/order.swagger.json
+      - ./swagger/my_order.swagger.json:/usr/share/nginx/html/api/my_order.swagger.json
+      - ./swagger/payment.swagger.json:/usr/share/nginx/html/api/payment.swagger.json
+      - ./swagger/webhook.swagger.json:/usr/share/nginx/html/api/webhook.swagger.json
+    environment:
+      URLS: "[{\"url\":\"/api/order.swagger.json\",\"name\":\"Order API\"},{\"url\":\"/api/my_order.swagger.json\",\"name\":\"My Order API\"},{\"url\":\"/api/payment.swagger.json\",\"name\":\"Payment API\"},{\"url\":\"/api/webhook.swagger.json\",\"name\":\"Webhook API\"}]"
+      PERSIST_AUTHORIZATION: "true"
+      URLS_PRIMARY_NAME: "General API"
+    restart: always
+    image: swaggerapi/swagger-ui:v4.12.0
+    ports:
+      - "9093:8080"
+    networks:
+      - tripdeals-promonet
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6365:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tripdeals-promonet
+  mysql:
+    image: mysql:8.0.34
+    environment:
+      MYSQL_ROOT_PASSWORD: password12345
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./data/01init.sql:/docker-entrypoint-initdb.d/01init.sql
+    ports:
+      - "3335:3306"
+    networks:
+      - tripdeals-promonet
+    command: --default-authentication-plugin=mysql_native_password
+
+
+networks:
+  tripdeals-promonet:
+    driver: bridge
+
+volumes:
+  redis_data:
+  mysql_data:
