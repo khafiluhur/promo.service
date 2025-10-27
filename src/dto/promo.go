@@ -42,3 +42,15 @@ type StrikeThoughtPrice struct {
 	CreatedAt     int64  `json:"created_at"`
 	UpdatedAt     int64  `json:"updated_at"`
 }
+
+type ApplyPromoCodeRequest struct {
+	Code string `json:"code" validate:"required"`
+}
+
+type ApplyPromoCodeResponse struct {
+	Valid          bool    `json:"valid"`
+	Code           string  `json:"code,omitempty"`
+	DiscountType   string  `json:"discount_type,omitempty"`
+	DiscountAmount float64 `json:"discount_amount,omitempty"`
+	Message        string  `json:"message"`
+}

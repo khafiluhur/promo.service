@@ -23,7 +23,7 @@ func NewPromoCodeRepositoryMySQL(db *gorm.DB) *PromoCodeRepositoryMySQL {
 
 func (repo *PromoCodeRepositoryMySQL) ByPromoCodes(ctx context.Context, promoCodes []string) ([]entity.PromoCode, error) {
 	result := []entity.PromoCode{}
-	err := repo.DB(ctx).Model(&entity.PromoCode{}).Where("promo_code IN ?", promoCodes).Find(&result).Error
+	err := repo.DB(ctx).Model(&entity.PromoCode{}).Where("promoCode IN ?", promoCodes).Find(&result).Error
 	if err != nil {
 		return nil, err
 	}

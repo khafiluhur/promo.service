@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	ctx2 "github.com/Golden-Rama-Digital/library-core-go/context"
 	"github.com/harryosmar/generic-gorm/base"
 	errorSvc "github.com/tripdeals/cms.backend.tripdeals.id/src/error"
 	errorLib "github.com/tripdeals/library-service.go/error"
+	"github.com/tripdeals/promo.service/src/dto"
 	"github.com/tripdeals/promo.service/src/entity"
 	"github.com/tripdeals/promo.service/src/repository"
 )
@@ -21,6 +23,7 @@ type PromoCodeService interface {
 	Update(ctx context.Context, record *entity.PromoCode) error
 	Activate(ctx context.Context, id int64) error
 	Deactivate(ctx context.Context, id int64) error
+	Apply(ctx context.Context, req dto.ApplyPromoCodeRequest) (*dto.ApplyPromoCodeResponse, error)
 }
 
 type PromoCodeServiceV1 struct {
@@ -83,13 +86,44 @@ func (s *PromoCodeServiceV1) Update(ctx context.Context, record *entity.PromoCod
 func (s *PromoCodeServiceV1) Activate(ctx context.Context, id int64) error {
 	record := &entity.PromoCode{Id: id, Status: true}
 	record.MetaData = record.SetMetaUpdate(ctx)
-	_, err := s.Repo.Update(ctx, record, []string{"is_active"})
+	_, err := s.Repo.Update(ctx, record, []string{"status"})
 	return err
 }
 
 func (s *PromoCodeServiceV1) Deactivate(ctx context.Context, id int64) error {
 	record := &entity.PromoCode{Id: id, Status: false}
 	record.MetaData = record.SetMetaUpdate(ctx)
-	_, err := s.Repo.Update(ctx, record, []string{"is_active"})
+	_, err := s.Repo.Update(ctx, record, []string{"status"})
 	return err
+}
+
+func (s *PromoCodeServiceV1) Apply(ctx context.Context, req dto.ApplyPromoCodeRequest) (*dto.ApplyPromoCodeResponse, error) {
+	promos, err := s.Repo.ByPromoCodes(ctx, []string{req.Code})
+	if err != nil {
+		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo tidak ditemukan"}, nil
+	}
+
+	promo := promos[0]
+	now := time.Now()
+	start := time.Unix(int64(promo.StartDate), 0)
+	end := time.Unix(int64(promo.EndDate), 0)
+	if now.Before(start) || now.After(end) {
+		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo sudah tidak berlaku"}, nil
+	}
+
+	if !promo.Status {
+		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo tidak aktif"}, nil
+	}
+
+	if promo.Quantity > 0 {
+		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo sudah habis kuotanya"}, nil
+	}
+
+	return &dto.ApplyPromoCodeResponse{
+		Valid:          true,
+		Code:           promo.PromoCode,
+		DiscountType:   promo.PromoAction,
+		DiscountAmount: promo.Amount,
+		Message:        fmt.Sprintf("Promo %s berhasil diterapkan", promo.PromoCode),
+	}, nil
 }

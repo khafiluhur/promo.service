@@ -76,6 +76,7 @@ func main() {
 
 	platformConfigsBase64 := cfg.PlatformConfig
 	configs, err := utils.MustDecodeBase64ToStruct[[]dto.Config](platformConfigsBase64)
+	fmt.Printf("hello: %s", configs)
 	if err != nil {
 		panic(fmt.Errorf("failed to decode platform configs: %w", err))
 	}
@@ -116,6 +117,7 @@ func main() {
 	paymentGroup.Use(defaultMiddlewares...)
 	paymentGroup.Use(serviceMiddleware.JWTAuthMiddlewareWithPlatforms(paymentAuthenticator, cfg.PlatformConfig))
 	handler.NewPromoCodeHandler(promoCodeService, validate, cfg, paymentAuthenticator).Routes(paymentGroup)
+	handler.NewMyPromoCodeHandler(promoCodeService, validate, cfg, paymentAuthenticator).Routes(paymentGroup)
 	handler.NewStrikeThroughtPriceHandler(strikeThroughtPriceService, validate, cfg, paymentAuthenticator).Routes(paymentGroup)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf("0.0.0.0:%d", cfg.AppPort)))
