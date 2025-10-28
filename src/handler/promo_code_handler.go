@@ -9,7 +9,9 @@ import (
 	"github.com/labstack/echo/v4"
 	presentationBackend "github.com/tripdeals/cms.backend.tripdeals.id/src/presentation"
 	paymentAuthenticator "github.com/tripdeals/library-service.go"
+	errorBackend "github.com/tripdeals/payment.service/src/error"
 	"github.com/tripdeals/payment.service/src/middleware"
+	"github.com/tripdeals/payment.service/src/utils"
 	"github.com/tripdeals/promo.service/config"
 	"github.com/tripdeals/promo.service/src/entity"
 	"github.com/tripdeals/promo.service/src/service"
@@ -26,18 +28,18 @@ func NewPromoCodeHandler(promoCodeService service.PromoCodeServiceV1, validate *
 	return &PromoCodeHandler{validate: validate, promoCodeService: promoCodeService, cfg: cfg, authenticator: authenticator}
 }
 
-func (h *PromoCodeHandler) Routes(g *echo.Group) {
-	g = g.Group("/:platform/promo-code", middleware.JWTAuthMiddlewareWithPlatforms(h.authenticator, h.cfg.PlatformConfig))
-	g.GET("", h.List())
-	g.GET("/:id", h.Detail())
-	g.GET("/by-slugs", h.BySlugs())
-	g.POST("", h.Create())
-	g.PUT("", h.Update())
-	g.PATCH("/activate/:id", h.Activate())
-	g.PATCH("/deactivate/:id", h.Deactivate())
+func (p *PromoCodeHandler) Routes(g *echo.Group) {
+	g = g.Group("/:platform/promo-code", middleware.JWTAuthMiddlewareWithPlatforms(p.authenticator, p.cfg.PlatformConfig))
+	g.GET("", p.List())
+	g.GET("/:id", p.Detail())
+	g.GET("/by-slugs", p.ByPromoCodes())
+	g.POST("", p.Create())
+	g.PUT("", p.Update())
+	g.PATCH("/activate/:id", p.Activate())
+	g.PATCH("/deactivate/:id", p.Deactivate())
 }
 
-func (h *PromoCodeHandler) List() echo.HandlerFunc {
+func (p *PromoCodeHandler) List() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var (
 			defaultPage   = 1
@@ -81,7 +83,18 @@ func (h *PromoCodeHandler) List() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
-		list, paginator, err := h.promoCodeService.List(ctx, page, limit, orders, wheres)
+
+		config, err := utils.GetPlatformConfig(ctx)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		list, paginator, err := p.promoCodeService.List(ctx, page, limit, orders, wheres)
 		if err != nil {
 			return err
 		}
@@ -94,7 +107,7 @@ func (h *PromoCodeHandler) List() echo.HandlerFunc {
 	}
 }
 
-func (h *PromoCodeHandler) Detail() echo.HandlerFunc {
+func (p *PromoCodeHandler) Detail() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -102,7 +115,7 @@ func (h *PromoCodeHandler) Detail() echo.HandlerFunc {
 			return err
 		}
 
-		result, err := h.promoCodeService.Detail(c.Request().Context(), id)
+		result, err := p.promoCodeService.Detail(c.Request().Context(), id)
 		if err != nil {
 			return err
 		}
@@ -110,11 +123,11 @@ func (h *PromoCodeHandler) Detail() echo.HandlerFunc {
 	}
 }
 
-func (h *PromoCodeHandler) BySlugs() echo.HandlerFunc {
+func (p *PromoCodeHandler) ByPromoCodes() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		params := c.QueryParams()
-		slugs := params["slugs[]"]
-		result, err := h.promoCodeService.BySlugs(c.Request().Context(), slugs)
+		promoCodes := params["promoCodes[]"]
+		result, err := p.promoCodeService.ByPromoCodes(c.Request().Context(), promoCodes)
 		if err != nil {
 			return err
 		}
@@ -123,7 +136,7 @@ func (h *PromoCodeHandler) BySlugs() echo.HandlerFunc {
 	}
 }
 
-func (h *PromoCodeHandler) Create() func(c echo.Context) error {
+func (p *PromoCodeHandler) Create() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		var promoCodeDTO entity.PromoCode
 		err := c.Bind(&promoCodeDTO)
@@ -131,12 +144,12 @@ func (h *PromoCodeHandler) Create() func(c echo.Context) error {
 			return err
 		}
 
-		err = h.validate.Struct(promoCodeDTO)
+		err = p.validate.Struct(promoCodeDTO)
 		if err != nil {
 			return presentation.ResponseErrValidation(err)
 		}
 
-		result, err := h.promoCodeService.Create(c.Request().Context(), &promoCodeDTO)
+		result, err := p.promoCodeService.Create(c.Request().Context(), &promoCodeDTO)
 		if err != nil {
 			return err
 		}
@@ -144,7 +157,7 @@ func (h *PromoCodeHandler) Create() func(c echo.Context) error {
 	}
 }
 
-func (h *PromoCodeHandler) Update() echo.HandlerFunc {
+func (p *PromoCodeHandler) Update() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var promoCodeDTO entity.PromoCode
 		err := c.Bind(&promoCodeDTO)
@@ -152,13 +165,13 @@ func (h *PromoCodeHandler) Update() echo.HandlerFunc {
 			return err
 		}
 
-		err = h.validate.Struct(promoCodeDTO)
+		err = p.validate.Struct(promoCodeDTO)
 		if err != nil {
 			return presentation.ResponseErrValidation(err)
 		}
 
 		ctx := c.Request().Context()
-		err = h.promoCodeService.Update(ctx, &promoCodeDTO)
+		err = p.promoCodeService.Update(ctx, &promoCodeDTO)
 		if err != nil {
 			return err
 		}
@@ -166,7 +179,7 @@ func (h *PromoCodeHandler) Update() echo.HandlerFunc {
 	}
 }
 
-func (h *PromoCodeHandler) Activate() echo.HandlerFunc {
+func (p *PromoCodeHandler) Activate() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -175,7 +188,7 @@ func (h *PromoCodeHandler) Activate() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
-		err = h.promoCodeService.Activate(ctx, id)
+		err = p.promoCodeService.Activate(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -184,7 +197,7 @@ func (h *PromoCodeHandler) Activate() echo.HandlerFunc {
 	}
 }
 
-func (h *PromoCodeHandler) Deactivate() echo.HandlerFunc {
+func (p *PromoCodeHandler) Deactivate() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -193,7 +206,7 @@ func (h *PromoCodeHandler) Deactivate() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
-		err = h.promoCodeService.Deactivate(ctx, id)
+		err = p.promoCodeService.Deactivate(ctx, id)
 		if err != nil {
 			return err
 		}

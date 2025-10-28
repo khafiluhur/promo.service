@@ -44,7 +44,10 @@ type StrikeThoughtPrice struct {
 }
 
 type ApplyPromoCodeRequest struct {
-	Code string `json:"code" validate:"required"`
+	Code          string `json:"code" validate:"required"`
+	ProductId     int64  `json:"product_id"`
+	Amount        int64  `json:"amount"`
+	PaymentMethod string `json:"payment_method"`
 }
 
 type ApplyPromoCodeResponse struct {
@@ -53,4 +56,16 @@ type ApplyPromoCodeResponse struct {
 	DiscountType   string  `json:"discount_type,omitempty"`
 	DiscountAmount float64 `json:"discount_amount,omitempty"`
 	Message        string  `json:"message"`
+}
+
+type RedeemPromoRequest struct {
+	Code    string `json:"code" validate:"required"`
+	OrderID string `json:"orderId" validate:"required"`
+	UserID  string `json:"-"`
+}
+
+type RedeemPromoResponse struct {
+	Code       string `json:"code"`
+	Status     string `json:"status"`
+	RedeemedAt string `json:"redeemedAt"`
 }

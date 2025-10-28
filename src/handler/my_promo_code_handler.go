@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/Golden-Rama-Digital/library-core-go/presentation"
 	"github.com/go-playground/validator/v10"
 	"github.com/labstack/echo/v4"
@@ -14,25 +16,76 @@ import (
 )
 
 type MyPromoCodeHandler struct {
-	validate         *validator.Validate
-	promoCodeService service.PromoCodeServiceV1
-	cfg              *config.Config
-	authenticator    paymentAuthenticator.PaymentInternalTokenAuthenticatorV1
+	validate           *validator.Validate
+	myPromoCodeService service.MyPromoCodeServiceV1
+	cfg                *config.Config
+	authenticator      paymentAuthenticator.PaymentInternalTokenAuthenticatorV1
 }
 
-func NewMyPromoCodeHandler(promoCodeService service.PromoCodeServiceV1, validate *validator.Validate, cfg *config.Config, authenticator paymentAuthenticator.PaymentInternalTokenAuthenticatorV1) *PromoCodeHandler {
-	return &PromoCodeHandler{validate: validate, promoCodeService: promoCodeService, cfg: cfg, authenticator: authenticator}
+func NewMyPromoCodeHandler(myPromoCodeService service.MyPromoCodeServiceV1, validate *validator.Validate, cfg *config.Config, authenticator paymentAuthenticator.PaymentInternalTokenAuthenticatorV1) *MyPromoCodeHandler {
+	return &MyPromoCodeHandler{validate: validate, myPromoCodeService: myPromoCodeService, cfg: cfg, authenticator: authenticator}
 }
 
-func (h *MyPromoCodeHandler) Routes(g *echo.Group) {
-	g = g.Group("/:platform", middleware.JWTAuthMiddlewareWithPlatforms(h.authenticator, h.cfg.PlatformConfig))
-	g.GET("/my-list", h.MyList())
-	g.GET("/my-list/:code", h.MyDetail())
-	g.POST("/apply", h.Apply())
-	g.POST("/redeem", h.Redeem())
+func (m *MyPromoCodeHandler) Routes(g *echo.Group) {
+	g = g.Group("/:platform", middleware.JWTAuthMiddlewareWithPlatforms(m.authenticator, m.cfg.PlatformConfig))
+	g.GET("/my-list", m.MyList())
+	g.GET("/my-list/:code", m.MyDetail())
+	g.POST("/apply", m.Apply())
+	g.POST("/redeem", m.Redeem())
 }
 
-func (h *MyPromoCodeHandler) MyList() echo.HandlerFunc {
+func (m *MyPromoCodeHandler) MyList() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, _ := utils.GetPlatformConfig(ctx)
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
+		list, err := m.myPromoCodeService.MyList(ctx, userID)
+		if err != nil {
+			return err
+		}
+
+		return presentation.WriteResponseOk(c, list)
+	}
+}
+
+func (m *MyPromoCodeHandler) MyDetail() echo.HandlerFunc {
+	return func(c echo.Context) error {
+		ctx := c.Request().Context()
+
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, _ := utils.GetPlatformConfig(ctx)
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
+		code := c.Param("code")
+		if code == "" {
+			return presentation.WriteResponseCreated(c, http.StatusBadRequest, "Kode promo tidak boleh kosong")
+		}
+
+		data, err := m.myPromoCodeService.MyDetail(ctx, code, userID)
+		if err != nil {
+			return err
+		}
+
+		return presentation.WriteResponseOk(c, data)
+	}
+}
+
+func (m *MyPromoCodeHandler) Apply() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var (
 			ctx = c.Request().Context()
@@ -43,39 +96,17 @@ func (h *MyPromoCodeHandler) MyList() echo.HandlerFunc {
 			return errorBackend.ErrUserIDNotFound
 		}
 
-		return nil
-	}
-}
-
-func (h *MyPromoCodeHandler) MyDetail() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		return nil
-	}
-}
-
-func (h *MyPromoCodeHandler) Apply() echo.HandlerFunc {
-	return func(c echo.Context) error {
-		// var (
-		// 	ctx = c.Request().Context()
-		// )
-
-		// userID, ok := utils.UserIDFromContext(ctx)
-		// if !ok || userID == "" {
-		// 	return errorBackend.ErrUserIDNotFound
-		// }
-
-		// config, _ := utils.GetPlatformConfig(ctx)
-		// fmt.Printf("Hello: %s", config)
-		// if userID == config.Platform {
-		// 	return errorBackend.ErrInvalidToken
-		// }
+		config, _ := utils.GetPlatformConfig(ctx)
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
 
 		var req dto.ApplyPromoCodeRequest
 		if err := c.Bind(&req); err != nil {
 			return presentation.ResponseErrValidation(err)
 		}
 
-		result, err := h.promoCodeService.Apply(c.Request().Context(), req)
+		result, err := m.myPromoCodeService.Apply(c.Request().Context(), req)
 		if err != nil {
 			return err
 		}
@@ -83,8 +114,35 @@ func (h *MyPromoCodeHandler) Apply() echo.HandlerFunc {
 	}
 }
 
-func (h *MyPromoCodeHandler) Redeem() echo.HandlerFunc {
+func (m *MyPromoCodeHandler) Redeem() echo.HandlerFunc {
 	return func(c echo.Context) error {
-		return nil
+		ctx := c.Request().Context()
+
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, _ := utils.GetPlatformConfig(ctx)
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
+		var req dto.RedeemPromoRequest
+		if err := c.Bind(&req); err != nil {
+			return presentation.ResponseErrValidation(err)
+		}
+
+		if err := m.validate.Struct(req); err != nil {
+			return presentation.ResponseErrValidation(err)
+		}
+
+		req.UserID = userID
+		resp, err := m.myPromoCodeService.Redeem(ctx, req)
+		if err != nil {
+			return err
+		}
+
+		return presentation.WriteResponseOk(c, resp)
 	}
 }

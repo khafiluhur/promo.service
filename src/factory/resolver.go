@@ -71,6 +71,10 @@ func ResolvePromoCodeService(db *gorm.DB) service.PromoCodeServiceV1 {
 	return *service.NewPromoCodeServiceV1(repository.NewPromoCodeRepositoryMySQL(db))
 }
 
+func ResolveMyPromoCodeService(db *gorm.DB) service.MyPromoCodeServiceV1 {
+	return *service.NewMyPromoCodeServiceV1(repository.NewPromoCodeRepositoryMySQL(db))
+}
+
 func ResolveStrikeThroughtPriceService(db *gorm.DB) service.StrikeThroughtPriceServiceV1 {
 	return *service.NewStrikeThroughtPriceServiceV1(repository.NewStrikeThroughtPriceRepositoryMySQL(db))
 }

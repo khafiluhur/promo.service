@@ -26,18 +26,18 @@ func NewStrikeThroughtPriceHandler(strikeThroughtPriceService service.StrikeThro
 	return &StrikeThroughtPriceHandler{validate: validate, strikeThroughtPriceService: strikeThroughtPriceService, cfg: cfg, authenticator: authenticator}
 }
 
-func (h *StrikeThroughtPriceHandler) Routes(g *echo.Group) {
-	g = g.Group("/:platform/strike-throught-price", middleware.JWTAuthMiddlewareWithPlatforms(h.authenticator, h.cfg.PlatformConfig))
-	g.GET("", h.List())
-	g.GET("/:id", h.Detail())
-	g.GET("/by-slugs", h.BySlugs())
-	g.POST("", h.Create())
-	g.PUT("", h.Update())
-	g.PATCH("/activate/:id", h.Activate())
-	g.PATCH("/deactivate/:id", h.Deactivate())
+func (s *StrikeThroughtPriceHandler) Routes(g *echo.Group) {
+	g = g.Group("/:platform/strike-throught-price", middleware.JWTAuthMiddlewareWithPlatforms(s.authenticator, s.cfg.PlatformConfig))
+	g.GET("", s.List())
+	g.GET("/:id", s.Detail())
+	g.GET("/by-slugs", s.ByIds())
+	g.POST("", s.Create())
+	g.PUT("", s.Update())
+	g.PATCH("/activate/:id", s.Activate())
+	g.PATCH("/deactivate/:id", s.Deactivate())
 }
 
-func (h *StrikeThroughtPriceHandler) List() echo.HandlerFunc {
+func (s *StrikeThroughtPriceHandler) List() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var (
 			defaultPage   = 1
@@ -81,7 +81,7 @@ func (h *StrikeThroughtPriceHandler) List() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
-		list, paginator, err := h.strikeThroughtPriceService.List(ctx, page, limit, orders, wheres)
+		list, paginator, err := s.strikeThroughtPriceService.List(ctx, page, limit, orders, wheres)
 		if err != nil {
 			return err
 		}
@@ -94,7 +94,7 @@ func (h *StrikeThroughtPriceHandler) List() echo.HandlerFunc {
 	}
 }
 
-func (h *StrikeThroughtPriceHandler) Detail() echo.HandlerFunc {
+func (s *StrikeThroughtPriceHandler) Detail() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -102,7 +102,7 @@ func (h *StrikeThroughtPriceHandler) Detail() echo.HandlerFunc {
 			return err
 		}
 
-		result, err := h.strikeThroughtPriceService.Detail(c.Request().Context(), id)
+		result, err := s.strikeThroughtPriceService.Detail(c.Request().Context(), id)
 		if err != nil {
 			return err
 		}
@@ -110,11 +110,11 @@ func (h *StrikeThroughtPriceHandler) Detail() echo.HandlerFunc {
 	}
 }
 
-func (h *StrikeThroughtPriceHandler) BySlugs() echo.HandlerFunc {
+func (s *StrikeThroughtPriceHandler) ByIds() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		params := c.QueryParams()
-		slugs := params["slugs[]"]
-		result, err := h.strikeThroughtPriceService.BySlugs(c.Request().Context(), slugs)
+		ids := params["ids[]"]
+		result, err := s.strikeThroughtPriceService.BySlugs(c.Request().Context(), ids)
 		if err != nil {
 			return err
 		}
@@ -123,7 +123,7 @@ func (h *StrikeThroughtPriceHandler) BySlugs() echo.HandlerFunc {
 	}
 }
 
-func (h *StrikeThroughtPriceHandler) Create() func(c echo.Context) error {
+func (s *StrikeThroughtPriceHandler) Create() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		var strikeThroughtPriceDTO entity.StrikeThroughtPrice
 		err := c.Bind(&strikeThroughtPriceDTO)
@@ -131,12 +131,12 @@ func (h *StrikeThroughtPriceHandler) Create() func(c echo.Context) error {
 			return err
 		}
 
-		err = h.validate.Struct(strikeThroughtPriceDTO)
+		err = s.validate.Struct(strikeThroughtPriceDTO)
 		if err != nil {
 			return presentation.ResponseErrValidation(err)
 		}
 
-		result, err := h.strikeThroughtPriceService.Create(c.Request().Context(), &strikeThroughtPriceDTO)
+		result, err := s.strikeThroughtPriceService.Create(c.Request().Context(), &strikeThroughtPriceDTO)
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func (h *StrikeThroughtPriceHandler) Create() func(c echo.Context) error {
 	}
 }
 
-func (h *StrikeThroughtPriceHandler) Update() echo.HandlerFunc {
+func (s *StrikeThroughtPriceHandler) Update() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		var strikeThroughtPriceDTO entity.StrikeThroughtPrice
 		err := c.Bind(&strikeThroughtPriceDTO)
@@ -152,13 +152,13 @@ func (h *StrikeThroughtPriceHandler) Update() echo.HandlerFunc {
 			return err
 		}
 
-		err = h.validate.Struct(strikeThroughtPriceDTO)
+		err = s.validate.Struct(strikeThroughtPriceDTO)
 		if err != nil {
 			return presentation.ResponseErrValidation(err)
 		}
 
 		ctx := c.Request().Context()
-		err = h.strikeThroughtPriceService.Update(ctx, &strikeThroughtPriceDTO)
+		err = s.strikeThroughtPriceService.Update(ctx, &strikeThroughtPriceDTO)
 		if err != nil {
 			return err
 		}
@@ -166,7 +166,7 @@ func (h *StrikeThroughtPriceHandler) Update() echo.HandlerFunc {
 	}
 }
 
-func (h *StrikeThroughtPriceHandler) Activate() echo.HandlerFunc {
+func (s *StrikeThroughtPriceHandler) Activate() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -175,7 +175,7 @@ func (h *StrikeThroughtPriceHandler) Activate() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
-		err = h.strikeThroughtPriceService.Activate(ctx, id)
+		err = s.strikeThroughtPriceService.Activate(ctx, id)
 		if err != nil {
 			return err
 		}
@@ -184,7 +184,7 @@ func (h *StrikeThroughtPriceHandler) Activate() echo.HandlerFunc {
 	}
 }
 
-func (h *StrikeThroughtPriceHandler) Deactivate() echo.HandlerFunc {
+func (s *StrikeThroughtPriceHandler) Deactivate() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		idStr := c.Param("id")
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -193,7 +193,7 @@ func (h *StrikeThroughtPriceHandler) Deactivate() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
-		err = h.strikeThroughtPriceService.Deactivate(ctx, id)
+		err = s.strikeThroughtPriceService.Deactivate(ctx, id)
 		if err != nil {
 			return err
 		}
