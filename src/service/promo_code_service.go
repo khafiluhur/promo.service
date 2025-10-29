@@ -53,7 +53,8 @@ func (p *PromoCodeServiceV1) Detail(ctx context.Context, id int64) (*entity.Prom
 }
 
 func (p *PromoCodeServiceV1) ByPromoCodes(ctx context.Context, promoCodes []string) ([]entity.PromoCode, error) {
-	return p.Repo.ByPromoCodes(ctx, promoCodes)
+	platformCfg, _ := utilspayment.GetPlatformConfig(ctx)
+	return p.Repo.ByPromoCodes(ctx, platformCfg.System, promoCodes)
 }
 
 func (p *PromoCodeServiceV1) Create(ctx context.Context, record *entity.PromoCode) (*entity.PromoCode, error) {
@@ -87,14 +88,14 @@ func (p *PromoCodeServiceV1) Update(ctx context.Context, record *entity.PromoCod
 }
 
 func (p *PromoCodeServiceV1) Activate(ctx context.Context, id int64) error {
-	record := &entity.PromoCode{Id: id, Status: true}
+	record := &entity.PromoCode{Id: id, IsActive: true}
 	record.MetaData = record.SetMetaUpdate(ctx)
 	_, err := p.Repo.Update(ctx, record, []string{"status"})
 	return err
 }
 
 func (p *PromoCodeServiceV1) Deactivate(ctx context.Context, id int64) error {
-	record := &entity.PromoCode{Id: id, Status: false}
+	record := &entity.PromoCode{Id: id, IsActive: false}
 	record.MetaData = record.SetMetaUpdate(ctx)
 	_, err := p.Repo.Update(ctx, record, []string{"status"})
 	return err

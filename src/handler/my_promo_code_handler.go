@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Golden-Rama-Digital/library-core-go/presentation"
@@ -44,10 +45,11 @@ func (m *MyPromoCodeHandler) MyList() echo.HandlerFunc {
 		}
 
 		config, _ := utils.GetPlatformConfig(ctx)
+		ctx, _ = utils.InjectPlatformConfigToContext(ctx, config.Platform, m.cfg.PlatformConfig)
+
 		if userID == config.Platform {
 			return errorBackend.ErrInvalidToken
 		}
-
 		list, err := m.myPromoCodeService.MyList(ctx, userID)
 		if err != nil {
 			return err
@@ -67,6 +69,8 @@ func (m *MyPromoCodeHandler) MyDetail() echo.HandlerFunc {
 		}
 
 		config, _ := utils.GetPlatformConfig(ctx)
+		ctx, _ = utils.InjectPlatformConfigToContext(ctx, config.Platform, m.cfg.PlatformConfig)
+
 		if userID == config.Platform {
 			return errorBackend.ErrInvalidToken
 		}
@@ -76,7 +80,7 @@ func (m *MyPromoCodeHandler) MyDetail() echo.HandlerFunc {
 			return presentation.WriteResponseCreated(c, http.StatusBadRequest, "Kode promo tidak boleh kosong")
 		}
 
-		data, err := m.myPromoCodeService.MyDetail(ctx, code, userID)
+		data, err := m.myPromoCodeService.MyDetail(ctx, code)
 		if err != nil {
 			return err
 		}
@@ -97,6 +101,8 @@ func (m *MyPromoCodeHandler) Apply() echo.HandlerFunc {
 		}
 
 		config, _ := utils.GetPlatformConfig(ctx)
+		ctx, _ = utils.InjectPlatformConfigToContext(ctx, config.Platform, m.cfg.PlatformConfig)
+
 		if userID == config.Platform {
 			return errorBackend.ErrInvalidToken
 		}
@@ -123,7 +129,11 @@ func (m *MyPromoCodeHandler) Redeem() echo.HandlerFunc {
 			return errorBackend.ErrUserIDNotFound
 		}
 
+		fmt.Printf("UserID: %s", userID)
+
 		config, _ := utils.GetPlatformConfig(ctx)
+		ctx, _ = utils.InjectPlatformConfigToContext(ctx, config.Platform, m.cfg.PlatformConfig)
+
 		if userID == config.Platform {
 			return errorBackend.ErrInvalidToken
 		}

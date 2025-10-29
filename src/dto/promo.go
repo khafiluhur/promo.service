@@ -1,30 +1,31 @@
 package dto
 
 type PromoCode struct {
-	ID            uint    `json:"id" gorm:"primaryKey;autoIncrement"`
-	Name          string  `json:"name"`
-	Description   string  `json:"description"`
-	TermCondition string  `json:"term_condition"`
-	StartDate     uint    `json:"start_date"`
-	EndDate       uint    `json:"end_date"`
-	Banner        string  `json:"banner"`
-	Rules         string  `json:"rules" gorm:"type:enum('otg','sp','pw')"`
-	Amount        float64 `json:"amount"`
-	ProductSlug   string  `json:"product_slug"`
-	PaymentMethod float64 `json:"payment_method"`
-	PromoAction   string  `json:"promo_action" gorm:"type:enum('fixed','percent')"`
-	PromoType     string  `json:"promo_type"`
-	Type          string  `json:"type"`
-	PromoCode     string  `json:"promo_code"`
-	CustomerLimit *int    `json:"customer_limit,omitempty"`
-	NewCustomer   bool    `json:"new_customer"`
-	Quantity      int     `json:"quantity"`
-	Status        string  `json:"status"`
-	SpecialPromo  *int    `json:"special_promo,omitempty"`
-	IsDisplay     bool    `json:"is_display"`
-	Platform      string  `json:"platform"`
-	CreatedAt     int64   `json:"created_at"`
-	UpdatedAt     int64   `json:"updated_at"`
+	ID             uint    `json:"id" gorm:"primaryKey;autoIncrement"`
+	Name           string  `json:"name"`
+	Description    string  `json:"description"`
+	TermCondition  string  `json:"term_condition"`
+	StartDate      uint    `json:"start_date"`
+	EndDate        uint    `json:"end_date"`
+	Banner         string  `json:"banner"`
+	Rules          string  `json:"rules" gorm:"type:enum('otg','sp','pw')"`
+	Amount         float64 `json:"amount"`
+	DiscountAmount float64 `json:"discountAmount"`
+	ProductSlug    string  `json:"productSlug"`
+	PaymentMethod  float64 `json:"paymentMethod"`
+	PromoAction    string  `json:"promoAction" gorm:"type:enum('fixed','percent')"`
+	PromoType      string  `json:"promoType"`
+	Type           string  `json:"type"`
+	PromoCode      string  `json:"promoCode"`
+	CustomerLimit  *int    `json:"customer_limit,omitempty"`
+	NewCustomer    bool    `json:"newCustomer"`
+	Quantity       int     `json:"quantity"`
+	IsActive       string  `json:"is_active"`
+	SpecialPromo   *int    `json:"special_promo,omitempty"`
+	IsDisplay      bool    `json:"isDisplay"`
+	Platform       string  `json:"platform"`
+	CreatedAt      int64   `json:"created_at"`
+	UpdatedAt      int64   `json:"updated_at"`
 }
 
 type StrikeThoughtPrice struct {

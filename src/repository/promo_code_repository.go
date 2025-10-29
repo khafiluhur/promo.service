@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/harryosmar/generic-gorm/base"
 	entityCms "github.com/tripdeals/cms.backend.tripdeals.id/src/entity"
@@ -21,10 +22,22 @@ func NewPromoCodeRepositoryMySQL(db *gorm.DB) *PromoCodeRepositoryMySQL {
 	}
 }
 
-func (repo *PromoCodeRepositoryMySQL) ByPromoCodes(ctx context.Context, promoCodes []string) ([]entity.PromoCode, error) {
+func (repo *PromoCodeRepositoryMySQL) ByPromoCodes(ctx context.Context, platform string, promoCodes []string) ([]entity.PromoCode, error) {
 	result := []entity.PromoCode{}
-	err := repo.DB(ctx).Model(&entity.PromoCode{}).Where("promoCode IN ?", promoCodes).Find(&result).Error
-	if err != nil {
+	wheres := []base.Where{
+		{Name: "platform", Value: platform},
+		{Name: "is_active", Value: true},
+	}
+
+	query := repo.DB(ctx).Model(&entity.PromoCode{})
+
+	for _, w := range wheres {
+		query = query.Where(fmt.Sprintf("%s = ?", w.Name), w.Value)
+	}
+
+	query = query.Where("promoCode IN ?", promoCodes)
+
+	if err := query.Find(&result).Error; err != nil {
 		return nil, err
 	}
 	return result, nil

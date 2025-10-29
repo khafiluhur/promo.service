@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/Golden-Rama-Digital/library-core-go/presentation"
@@ -83,6 +84,15 @@ func (p *PromoCodeHandler) List() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		platformID, ok := utils.PlatformFromContext(ctx)
+		if !ok {
+			return errorBackend.ErrUserIDNotFound
+		}
 
 		config, err := utils.GetPlatformConfig(ctx)
 		if err != nil {
@@ -92,6 +102,13 @@ func (p *PromoCodeHandler) List() echo.HandlerFunc {
 		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
 		if err != nil {
 			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		fmt.Printf("User : %s", userID)
+		fmt.Printf("Platfrom: %s", platformID)
+		fmt.Printf("config : %s", config.Platform)
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
 		}
 
 		list, paginator, err := p.promoCodeService.List(ctx, page, limit, orders, wheres)
@@ -115,6 +132,26 @@ func (p *PromoCodeHandler) Detail() echo.HandlerFunc {
 			return err
 		}
 
+		ctx := c.Request().Context()
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, err := utils.GetPlatformConfig(ctx)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
 		result, err := p.promoCodeService.Detail(c.Request().Context(), id)
 		if err != nil {
 			return err
@@ -127,6 +164,27 @@ func (p *PromoCodeHandler) ByPromoCodes() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		params := c.QueryParams()
 		promoCodes := params["promoCodes[]"]
+
+		ctx := c.Request().Context()
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, err := utils.GetPlatformConfig(ctx)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
 		result, err := p.promoCodeService.ByPromoCodes(c.Request().Context(), promoCodes)
 		if err != nil {
 			return err
@@ -147,6 +205,26 @@ func (p *PromoCodeHandler) Create() func(c echo.Context) error {
 		err = p.validate.Struct(promoCodeDTO)
 		if err != nil {
 			return presentation.ResponseErrValidation(err)
+		}
+
+		ctx := c.Request().Context()
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, err := utils.GetPlatformConfig(ctx)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
 		}
 
 		result, err := p.promoCodeService.Create(c.Request().Context(), &promoCodeDTO)
@@ -171,6 +249,25 @@ func (p *PromoCodeHandler) Update() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, err := utils.GetPlatformConfig(ctx)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
 		err = p.promoCodeService.Update(ctx, &promoCodeDTO)
 		if err != nil {
 			return err
@@ -188,6 +285,25 @@ func (p *PromoCodeHandler) Activate() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, err := utils.GetPlatformConfig(ctx)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
 		err = p.promoCodeService.Activate(ctx, id)
 		if err != nil {
 			return err
@@ -206,6 +322,25 @@ func (p *PromoCodeHandler) Deactivate() echo.HandlerFunc {
 		}
 
 		ctx := c.Request().Context()
+		userID, ok := utils.UserIDFromContext(ctx)
+		if !ok || userID == "" {
+			return errorBackend.ErrUserIDNotFound
+		}
+
+		config, err := utils.GetPlatformConfig(ctx)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		ctx, err = utils.InjectPlatformConfigToContext(ctx, config.Platform, p.cfg.PlatformConfig)
+		if err != nil {
+			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
+		}
+
+		if userID == config.Platform {
+			return errorBackend.ErrInvalidToken
+		}
+
 		err = p.promoCodeService.Deactivate(ctx, id)
 		if err != nil {
 			return err

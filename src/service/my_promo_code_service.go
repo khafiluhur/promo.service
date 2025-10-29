@@ -18,7 +18,7 @@ import (
 //go:generate mockgen -destination=mocks/mock_MyPromoCodeService.go -package=mocks . MyPromoCodeService
 type MyPromoCodeService interface {
 	MyList(ctx context.Context, userID string) ([]entity.PromoCode, error)
-	MyDetail(ctx context.Context, userID, code string) (*entity.PromoCode, error)
+	MyDetail(ctx context.Context, code string) (*entity.PromoCode, error)
 	Apply(ctx context.Context, req dto.ApplyPromoCodeRequest) (*dto.ApplyPromoCodeResponse, error)
 	Redeem(ctx context.Context, req dto.RedeemPromoRequest) (*dto.RedeemPromoResponse, error)
 }
@@ -36,7 +36,7 @@ func (m *MyPromoCodeServiceV1) MyList(ctx context.Context, userID string) ([]ent
 
 	wheres := []base.Where{
 		{Name: "platform", Value: platformCfg.System},
-		{Name: "status", Value: true},
+		{Name: "is_active", Value: true},
 	}
 
 	list, _, err := m.Repo.List(ctx, 1, 100, []base.OrderBy{{Field: "created_at", Direction: "desc"}}, wheres)
@@ -46,8 +46,9 @@ func (m *MyPromoCodeServiceV1) MyList(ctx context.Context, userID string) ([]ent
 	return list, nil
 }
 
-func (m *MyPromoCodeServiceV1) MyDetail(ctx context.Context, userID, code string) (*entity.PromoCode, error) {
-	promos, err := m.Repo.ByPromoCodes(ctx, []string{code})
+func (m *MyPromoCodeServiceV1) MyDetail(ctx context.Context, code string) (*entity.PromoCode, error) {
+	platformCfg, _ := utilspayment.GetPlatformConfig(ctx)
+	promos, err := m.Repo.ByPromoCodes(ctx, platformCfg.System, []string{code})
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,8 @@ func (m *MyPromoCodeServiceV1) MyDetail(ctx context.Context, userID, code string
 }
 
 func (m *MyPromoCodeServiceV1) Apply(ctx context.Context, req dto.ApplyPromoCodeRequest) (*dto.ApplyPromoCodeResponse, error) {
-	promos, err := m.Repo.ByPromoCodes(ctx, []string{req.Code})
+	platformCfg, _ := utilspayment.GetPlatformConfig(ctx)
+	promos, err := m.Repo.ByPromoCodes(ctx, platformCfg.System, []string{req.Code})
 	if err != nil || len(promos) == 0 {
 		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo tidak ditemukan"}, nil
 	}
@@ -72,7 +74,7 @@ func (m *MyPromoCodeServiceV1) Apply(ctx context.Context, req dto.ApplyPromoCode
 		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo sudah tidak berlaku"}, nil
 	}
 
-	if !promo.Status {
+	if !promo.IsActive {
 		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo tidak aktif"}, nil
 	}
 
@@ -84,13 +86,14 @@ func (m *MyPromoCodeServiceV1) Apply(ctx context.Context, req dto.ApplyPromoCode
 		Valid:          true,
 		Code:           promo.PromoCode,
 		DiscountType:   promo.PromoAction,
-		DiscountAmount: promo.Amount,
+		DiscountAmount: promo.DiscountAmount,
 		Message:        fmt.Sprintf("Promo %s berhasil diterapkan", promo.PromoCode),
 	}, nil
 }
 
 func (m *MyPromoCodeServiceV1) Redeem(ctx context.Context, req dto.RedeemPromoRequest) (*dto.RedeemPromoResponse, error) {
-	promos, err := m.Repo.ByPromoCodes(ctx, []string{req.Code})
+	platformCfg, _ := utilspayment.GetPlatformConfig(ctx)
+	promos, err := m.Repo.ByPromoCodes(ctx, platformCfg.System, []string{req.Code})
 	if err != nil || len(promos) == 0 {
 		return nil, errorSvc.ErrRecordTourNotFound
 	}
@@ -104,7 +107,7 @@ func (m *MyPromoCodeServiceV1) Redeem(ctx context.Context, req dto.RedeemPromoRe
 		return nil, fmt.Errorf("Kode promo sudah tidak berlaku")
 	}
 
-	if !promo.Status {
+	if !promo.IsActive {
 		return nil, fmt.Errorf("Kode promo tidak aktif")
 	}
 
