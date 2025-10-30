@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/Golden-Rama-Digital/library-core-go/presentation"
@@ -89,11 +88,6 @@ func (p *PromoCodeHandler) List() echo.HandlerFunc {
 			return errorBackend.ErrUserIDNotFound
 		}
 
-		platformID, ok := utils.PlatformFromContext(ctx)
-		if !ok {
-			return errorBackend.ErrUserIDNotFound
-		}
-
 		config, err := utils.GetPlatformConfig(ctx)
 		if err != nil {
 			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
@@ -103,10 +97,6 @@ func (p *PromoCodeHandler) List() echo.HandlerFunc {
 		if err != nil {
 			return presentation.ResponseErr(errorBackend.ErrConfigPlatform)
 		}
-
-		fmt.Printf("User : %s", userID)
-		fmt.Printf("Platfrom: %s", platformID)
-		fmt.Printf("config : %s", config.Platform)
 		if userID == config.Platform {
 			return errorBackend.ErrInvalidToken
 		}

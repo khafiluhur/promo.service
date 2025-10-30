@@ -14,7 +14,7 @@ type PromoCode struct {
 	Amount         float64 `gorm:"column:amount;type:decimal(13,2)"`
 	DiscountAmount float64 `gorm:"column:discountAmount;type:decimal(13,2)"`
 	ProductSlug    string  `gorm:"column:productSlug;type:varchar(255)"`
-	PaymentMethod  float64 `gorm:"column:paymentMethod;type:decimal(13,2)"`
+	PaymentMethod  string  `gorm:"column:paymentMethod;type:varchar(255)"`
 	PromoAction    string  `gorm:"column:promoAction;type:enum('fixed','percent')"`
 	PromoType      string  `gorm:"column:promoType;type:varchar(255)"`
 	Type           string  `gorm:"column:type;type:varchar(255)"`

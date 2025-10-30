@@ -12,7 +12,7 @@ type PromoCode struct {
 	Amount         float64 `json:"amount"`
 	DiscountAmount float64 `json:"discountAmount"`
 	ProductSlug    string  `json:"productSlug"`
-	PaymentMethod  float64 `json:"paymentMethod"`
+	PaymentMethod  string  `json:"paymentMethod"`
 	PromoAction    string  `json:"promoAction" gorm:"type:enum('fixed','percent')"`
 	PromoType      string  `json:"promoType"`
 	Type           string  `json:"type"`
@@ -45,10 +45,10 @@ type StrikeThoughtPrice struct {
 }
 
 type ApplyPromoCodeRequest struct {
-	Code          string `json:"code" validate:"required"`
-	ProductId     int64  `json:"product_id"`
-	Amount        int64  `json:"amount"`
-	PaymentMethod string `json:"payment_method"`
+	Code          string  `json:"code" validate:"required"`
+	ProductSlug   string  `json:"productSLug,omitempty"`
+	Amount        float64 `json:"amount,omitempty"`
+	PaymentMethod string  `json:"paymentMethod,omitempty"`
 }
 
 type ApplyPromoCodeResponse struct {
@@ -60,9 +60,12 @@ type ApplyPromoCodeResponse struct {
 }
 
 type RedeemPromoRequest struct {
-	Code    string `json:"code" validate:"required"`
-	OrderID string `json:"orderId" validate:"required"`
-	UserID  string `json:"-"`
+	Code          string  `json:"code" validate:"required"`
+	OrderID       string  `json:"orderId" validate:"required"`
+	UserID        string  `json:"-"`
+	ProductSlug   string  `json:"productSlug,omitempty"`
+	Amount        float64 `json:"amount,omitempty"`
+	PaymentMethod string  `json:"paymentMethod,omitempty"`
 }
 
 type RedeemPromoResponse struct {

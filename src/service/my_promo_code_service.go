@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
-	ctx2 "github.com/Golden-Rama-Digital/library-core-go/context"
 	"github.com/harryosmar/generic-gorm/base"
 	errorSvc "github.com/tripdeals/cms.backend.tripdeals.id/src/error"
 	errorLib "github.com/tripdeals/library-service.go/error"
@@ -24,11 +24,12 @@ type MyPromoCodeService interface {
 }
 
 type MyPromoCodeServiceV1 struct {
-	Repo *repository.PromoCodeRepositoryMySQL
+	PromoCodeRepo     *repository.PromoCodeRepositoryMySQL
+	PromoCodeUsedRepo *repository.PromoCodeUsedRepositoryMySQL
 }
 
-func NewMyPromoCodeServiceV1(repo *repository.PromoCodeRepositoryMySQL) *MyPromoCodeServiceV1 {
-	return &MyPromoCodeServiceV1{Repo: repo}
+func NewMyPromoCodeServiceV1(promoCodeRepo *repository.PromoCodeRepositoryMySQL, promoCodeUsedRepo *repository.PromoCodeUsedRepositoryMySQL) *MyPromoCodeServiceV1 {
+	return &MyPromoCodeServiceV1{PromoCodeRepo: promoCodeRepo, PromoCodeUsedRepo: promoCodeUsedRepo}
 }
 
 func (m *MyPromoCodeServiceV1) MyList(ctx context.Context, userID string) ([]entity.PromoCode, error) {
@@ -39,7 +40,7 @@ func (m *MyPromoCodeServiceV1) MyList(ctx context.Context, userID string) ([]ent
 		{Name: "is_active", Value: true},
 	}
 
-	list, _, err := m.Repo.List(ctx, 1, 100, []base.OrderBy{{Field: "created_at", Direction: "desc"}}, wheres)
+	list, _, err := m.PromoCodeRepo.List(ctx, 1, 100, []base.OrderBy{{Field: "created_at", Direction: "desc"}}, wheres)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +49,7 @@ func (m *MyPromoCodeServiceV1) MyList(ctx context.Context, userID string) ([]ent
 
 func (m *MyPromoCodeServiceV1) MyDetail(ctx context.Context, code string) (*entity.PromoCode, error) {
 	platformCfg, _ := utilspayment.GetPlatformConfig(ctx)
-	promos, err := m.Repo.ByPromoCodes(ctx, platformCfg.System, []string{code})
+	promos, err := m.PromoCodeRepo.ByPromoCodes(ctx, platformCfg.System, []string{code})
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +61,7 @@ func (m *MyPromoCodeServiceV1) MyDetail(ctx context.Context, code string) (*enti
 
 func (m *MyPromoCodeServiceV1) Apply(ctx context.Context, req dto.ApplyPromoCodeRequest) (*dto.ApplyPromoCodeResponse, error) {
 	platformCfg, _ := utilspayment.GetPlatformConfig(ctx)
-	promos, err := m.Repo.ByPromoCodes(ctx, platformCfg.System, []string{req.Code})
+	promos, err := m.PromoCodeRepo.ByPromoCodes(ctx, platformCfg.System, []string{req.Code})
 	if err != nil || len(promos) == 0 {
 		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo tidak ditemukan"}, nil
 	}
@@ -82,6 +83,32 @@ func (m *MyPromoCodeServiceV1) Apply(ctx context.Context, req dto.ApplyPromoCode
 		return &dto.ApplyPromoCodeResponse{Valid: false, Message: "Kode promo sudah habis kuotanya"}, nil
 	}
 
+	switch promo.Rules {
+	case "otg":
+		if req.Amount < promo.Amount {
+			return &dto.ApplyPromoCodeResponse{
+				Valid:   false,
+				Message: fmt.Sprintf("Minimal pembelian %.2f untuk menggunakan promo ini", promo.Amount),
+			}, nil
+		}
+
+	case "sp":
+		if req.ProductSlug == "" || req.ProductSlug != promo.ProductSlug {
+			return &dto.ApplyPromoCodeResponse{
+				Valid:   false,
+				Message: "Promo ini hanya berlaku untuk produk tertentu",
+			}, nil
+		}
+
+	case "pw":
+		if req.PaymentMethod == "" || req.PaymentMethod != promo.PaymentMethod {
+			return &dto.ApplyPromoCodeResponse{
+				Valid:   false,
+				Message: "Promo ini hanya berlaku untuk metode pembayaran tertentu",
+			}, nil
+		}
+	}
+
 	return &dto.ApplyPromoCodeResponse{
 		Valid:          true,
 		Code:           promo.PromoCode,
@@ -93,7 +120,7 @@ func (m *MyPromoCodeServiceV1) Apply(ctx context.Context, req dto.ApplyPromoCode
 
 func (m *MyPromoCodeServiceV1) Redeem(ctx context.Context, req dto.RedeemPromoRequest) (*dto.RedeemPromoResponse, error) {
 	platformCfg, _ := utilspayment.GetPlatformConfig(ctx)
-	promos, err := m.Repo.ByPromoCodes(ctx, platformCfg.System, []string{req.Code})
+	promos, err := m.PromoCodeRepo.ByPromoCodes(ctx, platformCfg.System, []string{req.Code})
 	if err != nil || len(promos) == 0 {
 		return nil, errorSvc.ErrRecordTourNotFound
 	}
@@ -115,12 +142,52 @@ func (m *MyPromoCodeServiceV1) Redeem(ctx context.Context, req dto.RedeemPromoRe
 		return nil, fmt.Errorf("Kode promo sudah habis kuotanya")
 	}
 
-	promo.Quantity = promo.Quantity - 1
-	userId, _ := ctx2.GetUserIdInt64FromSession(ctx)
-	promo.UpdatedAt = uint64(time.Now().Unix())
-	promo.UpdatedBy = uint64(userId)
+	switch promo.Rules {
+	case "otg":
+		if req.Amount < promo.Amount {
+			return nil, fmt.Errorf("Minimal pembelian %.2f untuk menggunakan promo ini", promo.Amount)
+		}
+	case "sp":
+		if req.ProductSlug == "" || req.ProductSlug != promo.ProductSlug {
+			return nil, fmt.Errorf("Promo ini hanya berlaku untuk produk tertentu")
+		}
 
-	_, err = m.Repo.Update(ctx, &promo, []string{"quantity", "updatedat", "updatedby"})
+	case "pw":
+		if req.PaymentMethod == "" || req.PaymentMethod != promo.PaymentMethod {
+			return nil, fmt.Errorf("Promo ini hanya berlaku untuk metode pembayaran tertentu")
+		}
+	}
+
+	promo.Quantity = promo.Quantity - 1
+	promo.UpdatedAt = uint64(time.Now().Unix())
+	userID, err := strconv.ParseUint(req.UserID, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID: %v", err)
+	}
+	promo.UpdatedBy = userID
+
+	_, err = m.PromoCodeRepo.Update(ctx, &promo, []string{"quantity", "updatedat", "updatedby"})
+	if err != nil {
+		if errDuplicate, ok := errorLib.ToErrDuplicateRecordsV2(err); ok {
+			return nil, errDuplicate
+		}
+		return nil, err
+	}
+
+	used := entity.PromoCodeUsed{
+		PromoCodeID:    uint(promo.Id),
+		PromoCode:      promo.PromoCode,
+		CustomerID:     req.UserID,
+		OrderID:        &req.OrderID,
+		Platform:       platformCfg.System,
+		DiscountAmount: &promo.DiscountAmount,
+		OrderTotal:     &req.Amount,
+		Status:         "used",
+		UsedAt:         uint64(time.Now().Unix()),
+		CreatedAt:      uint64(time.Now().Unix()),
+		UpdatedAt:      uint64(time.Now().Unix()),
+	}
+	_, err = m.PromoCodeUsedRepo.Create(ctx, &used)
 	if err != nil {
 		if errDuplicate, ok := errorLib.ToErrDuplicateRecordsV2(err); ok {
 			return nil, errDuplicate

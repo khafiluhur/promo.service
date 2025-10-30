@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Golden-Rama-Digital/library-core-go/presentation"
@@ -128,8 +127,6 @@ func (m *MyPromoCodeHandler) Redeem() echo.HandlerFunc {
 		if !ok || userID == "" {
 			return errorBackend.ErrUserIDNotFound
 		}
-
-		fmt.Printf("UserID: %s", userID)
 
 		config, _ := utils.GetPlatformConfig(ctx)
 		ctx, _ = utils.InjectPlatformConfigToContext(ctx, config.Platform, m.cfg.PlatformConfig)

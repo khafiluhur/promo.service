@@ -73,6 +73,28 @@ CREATE TABLE IF NOT EXISTS `strike_throught_price` (
   INDEX `idx_promo_id` (`id` ASC)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_general_ci;
 
+CREATE TABLE IF NOT EXISTS `promo_code_used` (
+  `id` BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `promo_code_id` INT(10) UNSIGNED NOT NULL COMMENT 'FK to promo_code.id',
+  `promo_code` VARCHAR(255) NOT NULL COMMENT 'Promo code string (redundant copy for easier query)',
+  `customer_id` BIGINT(20) UNSIGNED NOT NULL COMMENT 'Customer/User ID who used the promo',
+  `order_id` BIGINT(20) UNSIGNED DEFAULT NULL COMMENT 'Related order ID (if applicable)',
+  `platform` VARCHAR(50) NOT NULL COMMENT 'Platform name (same as promo_code.platform)',
+  `discount_amount` DECIMAL(13,2) DEFAULT NULL COMMENT 'Actual discount applied',
+  `order_total` DECIMAL(13,2) DEFAULT NULL COMMENT 'Order total before discount',
+  `status` ENUM('used', 'cancelled', 'refunded') NOT NULL DEFAULT 'used' COMMENT 'Usage status',
+  `used_at` BIGINT(20) UNSIGNED NOT NULL COMMENT 'When the promo was used (unix timestamp)',
+  `created_at` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0,
+  `updated_at` BIGINT(20) UNSIGNED NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  FOREIGN KEY (promo_code_id) REFERENCES promo_code (id) ON DELETE CASCADE,
+  KEY `idx_promo_code_id` (`promo_code_id`),
+  KEY `idx_customer_id` (`customer_id`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_platform` (`platform`),
+  KEY `idx_status` (`status`)
+) ENGINE = InnoDB DEFAULT CHARSET= utf8mb4 COLLATE = utf8mb4_general_ci;
+
 INSERT INTO `promo_code` (
   `id`,
   `name`,
