@@ -14,11 +14,16 @@ go run main.go
 
 ```shell
 docker-compose down && \
-docker volume rm paymentservice_mysql_data && \
+docker volume rm promoservice_mysql_data && \
 docker-compose up -d
 ```
 
 ## Dependencies
 
 - [github.com/Golden-Rama-Digital/library-core-go](https://github.com/Golden-Rama-Digital/library-core-go)
-- [github.com/Golden-Rama-Digital/library-espay-go](https://github.com/Golden-Rama-Digital/library-espay-go)
+- [github.com/tripdeals/cms.backend.tripdeals.id](https://github.com/tripdeals/cms.backend.tripdeals.id)
+- [github.com/tripdeals/payment.service](https://github.com/tripdeals/payment.service)
+- [github.com/tripdeals/library-service.go](https://github.com/tripdeals/library-service.go)
+- [github.com/tripdeals/library-service.go](https://github.com/tripdeals/library-service.go)
+- [github.com/harryosmar/cache-go](https://github.com/harryosmar/cache-go)
+- [github.com/harryosmar/generic-gorm](https://github.com/harryosmar/generic-gorm)
